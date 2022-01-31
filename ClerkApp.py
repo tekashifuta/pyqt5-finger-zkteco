@@ -170,6 +170,7 @@ class MyApp(QMainWindow):
         self.lblStatus.setText(resStatus)
         self.lblStatus.setStyleSheet(resStatColor)
         self.wkr_thd_1.stop()
+        self.startTimer_forConnecting()
 
     def on_j_done_2(self, resDData, resStatus, resStatColor):
         self.loadDataAndDisable(resDData)
