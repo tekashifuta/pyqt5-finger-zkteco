@@ -165,12 +165,13 @@ class MyApp(QMainWindow):
         self.wkr_thd_5.start()
 
     def on_j_done_1(self, resDict, resStatus, resStatColor):
-        self.loadDataAndDisable(resDict)
-        self.EnaSetting(False)
         self.lblStatus.setText(resStatus)
         self.lblStatus.setStyleSheet(resStatColor)
+        if resDict != {}:
+            self.loadDataAndDisable(resDict)
+            self.EnaSetting(False)
+            self.startTimer_forConnecting()
         self.wkr_thd_1.stop()
-        self.startTimer_forConnecting()
 
     def on_j_done_2(self, resDData, resStatus, resStatColor):
         self.loadDataAndDisable(resDData)
