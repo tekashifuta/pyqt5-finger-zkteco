@@ -12,8 +12,8 @@ import requests
 headers = {
     'Content-Type': 'application/json',
 }
-urlGetData = "http://localhost/Attendance_API/selectJsonAtt.php"
-urlGetSCNames = "http://localhost/Attendance_API/selectJsonAtt_SCNames.php"
+urlGetData = "http://localhost/prycegas_att/selectJsonAtt.php"
+urlGetSCNames = "http://localhost/prycegas_att/selectJsonAtt_SCNames.php"
 
 region_list = ["Blank", "CVO1", "CVO2", "CVO3", "EVO1", "EVO2", "EVO3", "NLO1", "NMO1", "NMO2", "OOC1", "SLO1", "SMO1", "SMO2", "WMO1", "WMO2", "WVO1", "WVO2"]
 cutoff_list = ["", "1st", "2nd"]
@@ -117,8 +117,6 @@ class thdGetAllUpSCNames(QThread):
 
     def stop(self):
         self.terminate()
-
-
 
 class thdGetDataFromMysql(QThread):
     res_to_emit_status = pyqtSignal(list, str, str, str, bool)
