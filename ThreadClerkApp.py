@@ -8,7 +8,8 @@ headers = {
     'Content-Type': 'application/json',
 }
 
-urlSave = "http://localhost/prycegas_att/saveJsonAtt.php"
+# urlSave = "http://localhost/prycegas_att/saveJsonAtt.php"
+urlSave = "http://attendance.prycegas.com/prycegas_att/saveJsonAtt.php"
 
 def to_json_get_all_attendance(msg): #convert into json format
     return {
@@ -130,7 +131,7 @@ class thdFetchAttendance(QThread):
         self.terminate()
 
 class thdSaveToMysql(QThread):
-    res_to_emit = pyqtSignal(str)
+    res_to_emit = pyqtSignal(str, str, bool)
 
     def __init__(self, parent=None):
         super(thdSaveToMysql, self).__init__(parent)
@@ -151,8 +152,10 @@ class thdSaveToMysql(QThread):
         }
         })
         response = requests.request("POST", url, headers=headers, data=payload)
-
-        self.res_to_emit.emit(str(response))
+        if response.text == "existing":
+            self.res_to_emit.emit("Existing Data...", "color: red", False)
+        else:
+            self.res_to_emit.emit("Done Saving", "color: green", True)
     
     def stop(self):
         self.terminate()

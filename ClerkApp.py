@@ -1,9 +1,7 @@
 from datetime import datetime
 import ipaddress
 import sys
-from time import process_time_ns
 from PyQt5 import QtWidgets, uic, QtCore
-from PyQt5.QtCore import QThread, pyqtSignal
 from PyQt5.QtWidgets import QApplication, QMainWindow
 from os.path import exists
 from ThreadClerkApp import thdConnZkteco, thdFetchAttendance, thdLoadData, thdSaveSettings, thdSaveToMysql
@@ -162,6 +160,8 @@ class MyApp(QMainWindow):
             self.lblStatus.setStyleSheet("color: red")
 
     def strt_wrkr_5(self):
+        self.lblStatus.setText("Saving Please Wait..")
+        self.lblStatus.setStyleSheet("color: orange")
         self.wkr_thd_5.start()
 
     def on_j_done_1(self, resDict, resStatus, resStatColor):
@@ -205,8 +205,11 @@ class MyApp(QMainWindow):
         self.wkr_thd_5.date_query = resDate
         self.wkr_thd_3.stop()
 
-    def on_j_done_5(self, resData):
-        print(resData)
+    def on_j_done_5(self, resData, resColor, resBool):
+        self.lblStatus.setText(resData)
+        self.lblStatus.setStyleSheet(resColor)
+        self.EnaQuery(resBool)
+        self.btnSaveToMysql.setEnabled(not resBool)
         self.wkr_thd_5.stop()
 
 
