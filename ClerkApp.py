@@ -4,7 +4,8 @@ import sys
 from PyQt5 import QtWidgets, uic, QtCore
 from PyQt5.QtWidgets import QApplication, QMainWindow
 from os.path import exists
-from ThreadClerkApp import thdConnZkteco, thdFetchAttendance, thdLoadData, thdSaveSettings, thdSaveToMysql
+from ThreadClerkApp import thdConnZkteco, thdFetchAttendance, thdLoadData, thdSaveSettings, thdSaveToMysql, thdSaveLocalDB
+from PyQt5.QtCore import QDate
 
 
 DURATION_INT = 3
@@ -14,9 +15,9 @@ class MyApp(QMainWindow):
     def __init__(self):
         super().__init__()
         uic.loadUi('conNew.ui', self)
-        self.setWindowTitle("Test App")
+        self.setWindowTitle("Attendance App")
         self.setContentsMargins(10, 10, 10, 10)
-        self.setFixedSize(683, 365) # set fixed size of the main window
+        self.setFixedSize(736, 413) # set fixed size of the main window
         self.loadData()
         header = self.tableWidget.horizontalHeader() 
         header.setSectionResizeMode(0, QtWidgets.QHeaderView.ResizeToContents)
@@ -25,6 +26,12 @@ class MyApp(QMainWindow):
         header.setSectionResizeMode(3, QtWidgets.QHeaderView.ResizeToContents)
         self.myTimer = QtCore.QTimer(self)
         self.cmbRegion.addItems(region_list)
+        
+        datenoww = datetime.today()
+        x = QDate(datenoww)
+        self.txtMonth.setDate(x)
+        self.txtDay.setDate(x)
+        self.txtYear.setDate(x)
 
         self.btnSaveSettings.clicked.connect(self.strt_wrkr_1)
         self.wkr_thd_1 = thdSaveSettings()
@@ -37,6 +44,10 @@ class MyApp(QMainWindow):
         self.btnSaveToMysql.clicked.connect(self.strt_wrkr_5)
         self.wkr_thd_5 = thdSaveToMysql()
         self.wkr_thd_5.res_to_emit.connect(self.on_j_done_5)
+
+        self.btnDownload.clicked.connect(self.strt_wrkr_6)
+        self.wkr_thd_6 = thdSaveLocalDB()
+        self.wkr_thd_6.res_to_emit.connect(self.on_j_done_6)
 
 
     def loadData(self):
@@ -160,9 +171,18 @@ class MyApp(QMainWindow):
             self.lblStatus.setStyleSheet("color: red")
 
     def strt_wrkr_5(self):
+        self.btnSaveToMysql.setEnabled(False)
+        self.btnDownload.setEnabled(False)
         self.lblStatus.setText("Saving Please Wait..")
         self.lblStatus.setStyleSheet("color: orange")
         self.wkr_thd_5.start()
+
+    def strt_wrkr_6(self):
+        self.btnSaveToMysql.setEnabled(False)
+        self.btnDownload.setEnabled(False)
+        self.lblStatus.setText("Saving Local Please Wait..")
+        self.lblStatus.setStyleSheet("color: orange")
+        self.wkr_thd_6.start()
 
     def on_j_done_1(self, resDict, resStatus, resStatColor):
         self.lblStatus.setText(resStatus)
@@ -198,20 +218,38 @@ class MyApp(QMainWindow):
             self.tableWidget.setItem(tableRow, 3, QtWidgets.QTableWidgetItem(str(att["punch"])))
             tableRow+=1
 
-        self.lblStatus.setText(resStatus)
-        self.lblStatus.setStyleSheet(resStatColor)
-        self.btnSaveToMysql.setEnabled(True)
-        self.wkr_thd_5.data_to_save = resList
-        self.wkr_thd_5.date_query = resDate
+        if len(resList) != 0:
+            self.lblStatus.setText(resStatus)
+            self.lblStatus.setStyleSheet(resStatColor)
+            self.btnSaveToMysql.setEnabled(True)
+            self.btnDownload.setEnabled(True)
+            self.wkr_thd_5.data_to_save = resList
+            self.wkr_thd_5.date_query = resDate
+
+            self.wkr_thd_6.data_to_save = resList
+            self.wkr_thd_6.date_query = resDate
+            self.wkr_thd_6.txt_sc_name = self.txtSCName.text()
+            self.wkr_thd_6.txt_region = self.cmbRegion.currentText()
+        else:
+            self.EnaQuery(True)
+            self.lblStatus.setText("No Data Available")
+            self.lblStatus.setStyleSheet("color: orange")
+
         self.wkr_thd_3.stop()
 
-    def on_j_done_5(self, resData, resColor, resBool):
-        self.lblStatus.setText(resData)
+    def on_j_done_5(self, resTxt, resColor):
+        self.lblStatus.setText(resTxt)
         self.lblStatus.setStyleSheet(resColor)
-        self.EnaQuery(resBool)
-        self.btnSaveToMysql.setEnabled(not resBool)
+        self.EnaQuery(True)
+        self.btnSaveToMysql.setEnabled(False)
         self.wkr_thd_5.stop()
 
+    def on_j_done_6(self, resTxt, resColor):
+        self.lblStatus.setText(resTxt)
+        self.lblStatus.setStyleSheet(resColor)
+        self.EnaQuery(True)
+        self.wkr_thd_6.stop()
+        
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)

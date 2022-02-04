@@ -1,5 +1,8 @@
-from datetime import datetime
+from datetime import date, datetime
+import errno
 import json
+import os
+import pickle
 from PyQt5.QtCore import QThread, pyqtSignal
 from zk import ZK
 import requests
@@ -121,7 +124,7 @@ class thdFetchAttendance(QThread):
 
         except Exception as e:
             string_pas = "{}".format(e)
-            self.res_to_emit.emit([], string_pas, "color: red")
+            self.res_to_emit.emit([], string_pas, "color: red", date_now)
 
         finally:
             if conn:
@@ -131,7 +134,7 @@ class thdFetchAttendance(QThread):
         self.terminate()
 
 class thdSaveToMysql(QThread):
-    res_to_emit = pyqtSignal(str, str, bool)
+    res_to_emit = pyqtSignal(str, str)
 
     def __init__(self, parent=None):
         super(thdSaveToMysql, self).__init__(parent)
@@ -153,9 +156,43 @@ class thdSaveToMysql(QThread):
         })
         response = requests.request("POST", url, headers=headers, data=payload)
         if response.text == "existing":
-            self.res_to_emit.emit("Existing Data...", "color: red", False)
+            resTxt = "Existing Data..."
+            resColor = "color: red"
         else:
-            self.res_to_emit.emit("Done Saving", "color: green", True)
+            resTxt = "Done Saving"
+            resColor = "color: green"
+        
+        self.res_to_emit.emit(resTxt, resColor)
     
+    def stop(self):
+        self.terminate()
+
+class thdSaveLocalDB(QThread):
+    res_to_emit = pyqtSignal(str, str)
+
+    def __init__(self, parent=None):
+        super(thdSaveLocalDB, self).__init__(parent)
+
+    def run(self):
+        dictToSave = {
+            "region_name": self.txt_region,
+            "sc_name": self.txt_sc_name,
+            "query_date": self.date_query,
+            "data_json": self.data_to_save
+        }
+        dateNow = date.today()
+        filename = f"./DownloadFiles/{dateNow.strftime('%m.%d.%Y')}.{self.txt_region}.pkl"
+        if not os.path.exists(os.path.dirname(filename)):#check if folder exist then creat if not
+            try:
+                os.makedirs(os.path.dirname(filename))
+            except OSError as exc: # Guard against race condition
+                if exc.errno != errno.EEXIST:
+                    raise
+
+        with open(filename, "wb") as outfile:
+            pickle.dump(dictToSave, outfile)
+
+        self.res_to_emit.emit("OK Check DownloadFiles", "color: green")
+
     def stop(self):
         self.terminate()
