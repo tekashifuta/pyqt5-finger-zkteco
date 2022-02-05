@@ -1,8 +1,5 @@
-from ast import Try
 from datetime import date, datetime
 import errno
-from fileinput import filename
-from importlib.resources import path
 import json
 import os
 import pickle
@@ -11,6 +8,7 @@ from PyQt5 import QtWidgets, uic
 from PyQt5.QtWidgets import QApplication, QMainWindow, QFileDialog
 from PyQt5.QtCore import QDate, QThread, pyqtSignal
 import requests
+from HRClientUI import Ui_MainWindow
 
 headers = {
     'Content-Type': 'application/json',
@@ -19,22 +17,25 @@ headers = {
 # urlSave = "http://localhost/prycegas_att/saveJsonAtt.php"
 # urlGetSCNames = "http://attendance.prycegas.com/prycegas_att/selectJsonAtt_SCNames.php"
 # urlUpdateStatus = "http://attendance.prycegas.com/prycegas_att/selectJsonAtt_SCNames.php"
-urlGetSCNames = "http://localhost/prycegas_att/selectJsonAtt_SCNames.php"
-urlUpdateStatus = "http://localhost/prycegas_att/updateDL_status.php"
+urlGetSCNames = "http://attendance.prycegas.com/prycegas_att/selectJsonAtt_SCNames_v1.php"
+urlUpdateStatus = "http://attendance.prycegas.com/prycegas_att/updateDL_status_v1.php"
 
 region_list = ["Blank", "CVO1", "CVO2", "CVO3", "EVO1", "EVO2", "EVO3", "NLO1", "NMO1", "NMO2", "OOC1", "SLO1", "SMO1", "SMO2", "WMO1", "WMO2", "WVO1", "WVO2"]
 
-class MyApp(QMainWindow):
+datenoww = datetime.today()
+x = QDate(datenoww)
+
+class MyApp(QMainWindow, Ui_MainWindow): # inherit the Ui_MainWindow class from HRClientUI.py HRClient.ui generated via  ----- python -m PyQt5.uic.pyuic youruifile -o yourpyfile -x
     def __init__(self):
         super().__init__()
-        uic.loadUi('HRClient.ui', self)
+        self.setupUi(self) #Load the setup ui from converted python ui
+        # uic.loadUi('HRClient.ui', self) # para ni e load ang .ui file e erase lng ang Ui_MainWindow sa class
         self.setWindowTitle("HR Client App")
         self.setContentsMargins(10, 10, 10, 10)
         self.setFixedSize(421, 547) # set fixed size of the main window
         self.cmbRegion.addItems(region_list)
         self.progressBar.setProperty("value", 0)
-        datenoww = datetime.today()
-        x = QDate(datenoww)
+
         self.txtDate.setDate(x)
         # self.txtToDate.setDate(x)
 
@@ -44,10 +45,12 @@ class MyApp(QMainWindow):
         self.wrkr_thd_1.res_to_emit_timer.connect(self.on_jb_don_PBar)
 
         self.btnConvertToDAT.clicked.connect(self.strt_wrkr_2)
+        self.btnConvertToDAT.clicked.connect(self.strt_wrkr_3)
         self.wrkr_thd_2 = thdConvertData()
         self.wrkr_thd_2.res_to_emit.connect(self.on_jb_don_2)
 
         self.wrkr_thd_3 = thdUpdateStatus()
+        self.wrkr_thd_3.res_to_emit.connect(self.on_jb_don_3)
 
         self.btnOpenFileD.clicked.connect(self.strt_wrkr_4)
         self.wrkr_thd_4 = thdReadPickle()
@@ -57,6 +60,8 @@ class MyApp(QMainWindow):
         self.wrkr_thd_5 = thdConvPklToDatFile()
         self.wrkr_thd_5.res_to_emit.connect(self.on_jb_don_5)
         self.wrkr_thd_5.res_to_emit_timer.connect(self.on_jb_don_PBar)
+
+        self.btnReset.clicked.connect(self.resetUi)
 
 
     def setEna(self, resBool):
@@ -73,6 +78,26 @@ class MyApp(QMainWindow):
         self.btnGetQueryData.setEnabled(resBool)
         self.btnConvertToDAT.setEnabled(resBool)
 
+    def resetUi(self):
+        self.cmbRegion.setCurrentText("Blank")
+        self.txtDate.setDate(x)
+        self.cmbDL_Status.setCurrentText("not downloaded")
+        self.cmbRegion.setEnabled(True)
+        self.txtDate.setEnabled(True)
+        self.cmbDL_Status.setEnabled(True)
+        self.btnGetQueryData.setEnabled(True)
+        self.btnConvertToDAT.setEnabled(False)
+        self.btnOpenFileD.setEnabled(True)
+        self.btnPklToDat.setEnabled(False)
+        self.tableWidget.setRowCount(0)
+        self.tableWidget.setItem(0, 0, QtWidgets.QTableWidgetItem(""))
+        self.progressBar.setValue(0)
+        self.lblSCName.setText("...")
+        self.lblDateQuery.setText("...")
+        self.lblNoRec.setText("...")
+        self.lblStatus.setText("GUI Reset")
+        self.lblStatus.setStyleSheet('color: green')
+
     def strt_wrkr_1(self):
         self.lblStatus.setText("Generating...")
         self.lblStatus.setStyleSheet('color: orange')
@@ -84,9 +109,11 @@ class MyApp(QMainWindow):
     def strt_wrkr_2(self):
         self.lblStatus.setText("Creating DAT File...")
         self.lblStatus.setStyleSheet('color: orange')
-        self.wrkr_thd_2.start()
         self.wrkr_thd_3.txt_region = self.cmbRegion.currentText()
         self.wrkr_thd_3.txt_date_query = self.txtDate.text()
+        self.wrkr_thd_2.start()
+
+    def strt_wrkr_3(self):
         self.wrkr_thd_3.start()
 
     def strt_wrkr_4(self):
@@ -103,25 +130,27 @@ class MyApp(QMainWindow):
 
 
     def on_jb_don_1(self, scList, dataList, resTxt, resColor):
-        tableRow = 0
-        self.tableWidget.setRowCount(len(scList))
-        for att in scList:
-            self.tableWidget.setItem(tableRow, 0, QtWidgets.QTableWidgetItem(att))
-            tableRow+=1
-        self.lblStatus.setText(resTxt)
-        self.lblStatus.setStyleSheet(resColor)
         if resTxt == "Done Query":
+            tableRow = 0
+            self.tableWidget.setRowCount(len(scList))
+            for att in scList:
+                self.tableWidget.setItem(tableRow, 0, QtWidgets.QTableWidgetItem(att))
+                tableRow+=1
             self.setEna(False)
             self.wrkr_thd_2.txt_data_to_convert = dataList
             self.wrkr_thd_2.txt_region = self.cmbRegion.currentText()
+        self.lblStatus.setText(resTxt)
+        self.lblStatus.setStyleSheet(resColor)
         self.wrkr_thd_1.stop()
 
     def on_jb_don_2(self, resTxt, resColor):
         self.lblStatus.setText(resTxt)
         self.lblStatus.setStyleSheet(resColor)
         self.wrkr_thd_2.stop()
-        self.wrkr_thd_3.stop()
         self.setEna(True)
+
+    def on_jb_don_3(self):
+        self.wrkr_thd_3.stop()
     
     def on_jb_don_PBar(self, resInt):
         self.progressBar.setValue(resInt)
@@ -196,7 +225,7 @@ class thdFetchDataToMysql(QThread):
         self.terminate()
 
 class thdUpdateStatus(QThread):
-    res_to_emit = pyqtSignal(str, str)
+    res_to_emit = pyqtSignal(str)
 
     def __init__(self, parent=None):
         super(thdUpdateStatus, self).__init__(parent)
@@ -210,8 +239,7 @@ class thdUpdateStatus(QThread):
         }
         })
         response = requests.request("POST", url, headers=headers, data=payload)
-
-        print(response)
+        self.res_to_emit.emit(response.text)
 
     def stop(self):
         self.terminate()
@@ -236,7 +264,7 @@ class thdConvertData(QThread):
             for items in self.txt_data_to_convert:
                 outfile.write("%s\n" % items)
 
-        self.res_to_emit.emit("Done Creating", "color: green")
+        self.res_to_emit.emit("DAT File Created", "color: green")
 
     def stop(self):
         self.terminate()
@@ -252,7 +280,7 @@ class thdReadPickle(QThread):
             try:
                 loaded_file = pickle.load(outfile)
                 self.res_to_emit.emit("Files Loaded", "color: green", True, loaded_file)
-            except Exception as e:
+            except pickle.UnpicklingError as e:
                 self.res_to_emit.emit(f"Error: Check File {e}", "color: red", False, {})
 
     def stop(self):

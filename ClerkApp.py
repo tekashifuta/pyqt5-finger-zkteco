@@ -6,15 +6,17 @@ from PyQt5.QtWidgets import QApplication, QMainWindow
 from os.path import exists
 from ThreadClerkApp import thdConnZkteco, thdFetchAttendance, thdLoadData, thdSaveSettings, thdSaveToMysql, thdSaveLocalDB
 from PyQt5.QtCore import QDate
+from ClerkAppUI import Ui_MainWindow #GUI Python File
 
 
 DURATION_INT = 3
 region_list = ["Blank", "CVO1", "CVO2", "CVO3", "EVO1", "EVO2", "EVO3", "NLO1", "NMO1", "NMO2", "OOC1", "SLO1", "SMO1", "SMO2", "WMO1", "WMO2", "WVO1", "WVO2"]
 
-class MyApp(QMainWindow):
+class MyApp(QMainWindow, Ui_MainWindow):# inherit the Ui_MainWindow class from clerkappui generated via  ----- python -m PyQt5.uic.pyuic youruifile -o yourpyfile -x
     def __init__(self):
         super().__init__()
-        uic.loadUi('conNew.ui', self)
+        self.setupUi(self)#Load the setup ui from converted python ui
+        # uic.loadUi('conNew.ui', self) # para ni e load ang .ui file e erase lng ang Ui_MainWindow sa class
         self.setWindowTitle("Attendance App")
         self.setContentsMargins(10, 10, 10, 10)
         self.setFixedSize(736, 413) # set fixed size of the main window
@@ -72,7 +74,7 @@ class MyApp(QMainWindow):
         date_fmt_now = datetime.now()
         dateNew = datetime.strptime(date_fmt, "%Y-%m-%d").strftime("%Y-%m-%d")
         dateNow = date_fmt_now.strftime("%Y-%m-%d")
-        if dateNew < dateNow:
+        if dateNew < dateNow or dateNew == dateNow:
             return True
         else:
             return False

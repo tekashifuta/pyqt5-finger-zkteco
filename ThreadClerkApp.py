@@ -12,7 +12,7 @@ headers = {
 }
 
 # urlSave = "http://localhost/prycegas_att/saveJsonAtt.php"
-urlSave = "http://attendance.prycegas.com/prycegas_att/saveJsonAtt.php"
+urlSave = "http://attendance.prycegas.com/prycegas_att/saveJsonAtt_v1.php"
 
 def to_json_get_all_attendance(msg): #convert into json format
     return {
