@@ -46,6 +46,7 @@ class thdSaveSettings(QThread):
             # Writing to sample.json
             with open("date.json", "w") as outfile:
                 outfile.write(json_object)
+            os.system(f"attrib +h date.json")
             self.res_to_emit.emit(dictSett, "Data Saved", "color: green")
 
         except Exception as e:
@@ -66,10 +67,13 @@ class thdLoadData(QThread):
         super(thdLoadData, self).__init__(parent)
 
     def run(self):
-        openfile = open('date.json', 'r')
-        # Reading from json file
-        openfile_obj = json.load(openfile)
-        openfile.close()
+        with open('date.json', 'r') as openfile:
+            openfile_obj = json.load(openfile)
+
+        # openfile = open('date.json', 'r')
+        # # Reading from json file
+        # openfile_obj = json.load(openfile)
+        # openfile.close()
 
         self.res_to_emit.emit(openfile_obj, "Data Loaded", "color: green")
 
@@ -111,8 +115,9 @@ class thdFetchAttendance(QThread):
         zk = ZK(self.txt_ip, port=int(self.txt_port), timeout=5, password=0, force_udp=False, ommit_ping=False)
         try:
             conn = zk.connect()
-            date_fmt = str(self.txt_year) + "-" + str(self.txt_month) + "-" + str(self.txt_day)
-            date_now = datetime.strptime(date_fmt, "%Y-%m-%d").strftime("%Y-%m-%d")
+            # date_fmt = str(self.txt_year) + "-" + str(self.txt_month) + "-" + str(self.txt_day)
+            # date_now = datetime.strptime(date_fmt, "%Y-%m-%d").strftime("%Y-%m-%d")
+            date_now = datetime.strptime(self.date_new, "%m/%d/%Y").strftime("%Y-%m-%d")
             attendance = conn.get_attendance()
             res2 = [
                 to_json_get_all_attendance(z) for z in attendance if (datetime.strftime(z.timestamp, "%Y-%m-%d") == date_now)
@@ -140,10 +145,12 @@ class thdSaveToMysql(QThread):
         super(thdSaveToMysql, self).__init__(parent)
 
     def run(self):
-        openfile = open('date.json', 'r')
-        # Reading from json file
-        openfile_obj = json.load(openfile)
-        openfile.close()
+        with open('date.json', 'r') as openfile:
+            openfile_obj = json.load(openfile)
+        # openfile = open('date.json', 'r')
+        # # Reading from json file
+        # openfile_obj = json.load(openfile)
+        # openfile.close()
 
         url = urlSave
         payload = json.dumps({
@@ -188,7 +195,7 @@ class thdSaveLocalDB(QThread):
             except OSError as exc: # Guard against race condition
                 if exc.errno != errno.EEXIST:
                     raise
-
+        
         with open(filename, "wb") as outfile:
             pickle.dump(dictToSave, outfile)
 

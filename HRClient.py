@@ -5,7 +5,7 @@ import os
 import pickle
 import sys
 from PyQt5 import QtWidgets, uic
-from PyQt5.QtWidgets import QApplication, QMainWindow, QFileDialog
+from PyQt5.QtWidgets import QApplication, QMainWindow, QFileDialog, QMessageBox
 from PyQt5.QtCore import QDate, QThread, pyqtSignal
 import requests
 from HRClientUI import Ui_MainWindow
@@ -32,12 +32,15 @@ class MyApp(QMainWindow, Ui_MainWindow): # inherit the Ui_MainWindow class from 
         # uic.loadUi('HRClient.ui', self) # para ni e load ang .ui file e erase lng ang Ui_MainWindow sa class
         self.setWindowTitle("HR Client App")
         self.setContentsMargins(10, 10, 10, 10)
-        self.setFixedSize(421, 547) # set fixed size of the main window
+        self.setFixedSize(403, 812) # set fixed size of the main window
         self.cmbRegion.addItems(region_list)
         self.progressBar.setProperty("value", 0)
+        self.progressBar.hide()
 
         self.txtDate.setDate(x)
         # self.txtToDate.setDate(x)
+        header = self.tableWidget.horizontalHeader() 
+        header.setSectionResizeMode(0, QtWidgets.QHeaderView.ResizeToContents)
 
         self.btnGetQueryData.clicked.connect(self.strt_wrkr_1)
         self.wrkr_thd_1 = thdFetchDataToMysql()
@@ -63,6 +66,21 @@ class MyApp(QMainWindow, Ui_MainWindow): # inherit the Ui_MainWindow class from 
 
         self.btnReset.clicked.connect(self.resetUi)
 
+        self.btnAboutInfo.triggered.connect(self.show_about)
+
+    def show_about(self):
+        msg = QMessageBox()
+        msg.setWindowTitle("About")
+        msg.setText("Designed By: PGI Corporate I.T.<br> Programmed By: DPZea")
+        msg.setIcon(QMessageBox.Question)
+        x = msg.exec_()
+
+    def show_message(self, strMessage, info):
+        msg = QMessageBox()
+        msg.setWindowTitle(info)
+        msg.setText(strMessage)
+        msg.setIcon(QMessageBox.Question)
+        x = msg.exec_()
 
     def setEna(self, resBool):
         self.cmbRegion.setEnabled(resBool)
@@ -87,7 +105,7 @@ class MyApp(QMainWindow, Ui_MainWindow): # inherit the Ui_MainWindow class from 
         self.cmbDL_Status.setEnabled(True)
         self.btnGetQueryData.setEnabled(True)
         self.btnConvertToDAT.setEnabled(False)
-        self.btnOpenFileD.setEnabled(True)
+        # self.btnOpenFileD.setEnabled(True)
         self.btnPklToDat.setEnabled(False)
         self.tableWidget.setRowCount(0)
         self.tableWidget.setItem(0, 0, QtWidgets.QTableWidgetItem(""))
@@ -101,7 +119,7 @@ class MyApp(QMainWindow, Ui_MainWindow): # inherit the Ui_MainWindow class from 
     def strt_wrkr_1(self):
         self.lblStatus.setText("Generating...")
         self.lblStatus.setStyleSheet('color: orange')
-        self.wrkr_thd_1.txt_date = self.txtDate.text()
+        self.wrkr_thd_1.txt_date = datetime.strptime(self.txtDate.text(), "%m/%d/%Y").strftime("%Y-%m-%d")
         self.wrkr_thd_1.txt_region = self.cmbRegion.currentText()
         self.wrkr_thd_1.txt_dl_status = self.cmbDL_Status.currentText()
         self.wrkr_thd_1.start()
@@ -110,7 +128,7 @@ class MyApp(QMainWindow, Ui_MainWindow): # inherit the Ui_MainWindow class from 
         self.lblStatus.setText("Creating DAT File...")
         self.lblStatus.setStyleSheet('color: orange')
         self.wrkr_thd_3.txt_region = self.cmbRegion.currentText()
-        self.wrkr_thd_3.txt_date_query = self.txtDate.text()
+        self.wrkr_thd_3.txt_date_query = datetime.strptime(self.txtDate.text(), "%m/%d/%Y").strftime("%Y-%m-%d")
         self.wrkr_thd_2.start()
 
     def strt_wrkr_3(self):
@@ -153,6 +171,11 @@ class MyApp(QMainWindow, Ui_MainWindow): # inherit the Ui_MainWindow class from 
         self.wrkr_thd_3.stop()
     
     def on_jb_don_PBar(self, resInt):
+        if resInt > 0:
+            self.progressBar.show()
+        if resInt == 100:
+            self.progressBar.hide()
+            self.show_message("Data Successfully Downloaded", "Information")
         self.progressBar.setValue(resInt)
 
     def on_jb_don_4(self, resTxt, resColor, resBool, resDict):
@@ -185,9 +208,9 @@ class thdFetchDataToMysql(QThread):
         super(thdFetchDataToMysql, self).__init__(parent)
 
     def run(self):
-        if self.txt_dl_status == 'not downloaded':
+        if self.txt_dl_status == 'Not Downloaded':
             txt_status = ''
-        elif self.txt_dl_status == 'downloaded':
+        elif self.txt_dl_status == 'Downloaded':
             txt_status = 'downloaded'
         else:
             txt_status = 'all'
@@ -199,25 +222,24 @@ class thdFetchDataToMysql(QThread):
             "dl_status": txt_status,
         }
         })
-        response = requests.request("POST", urlGetSCNames, headers=headers, data=payload)
+        try:
+            response = requests.request("POST", urlGetSCNames, headers=headers, data=payload)
+        except Exception as e:
+            self.res_to_emit.emit([], [], f"{e}", "color: red")
         if response.text != "empty":
             responses = json.loads(response.text)
-            list_sc = []
-            list_j_data = []
-            for response in responses:
-                list_sc.append(response['sc_name'])#combine and store sale center name in a list 
-                list_j_data.append(response['data_json'])#combine and store json data name in a list 
+            list_sc = [x['sc_name'] for x in responses] #using list comprehension
+            list_j_data = [x['data_json'] for x in responses] #using list comprehension
 
-            res_list = []
-            test12 = 0
             for ilist in list_j_data:
-                for item in ilist:
-                    if int(item["punch"]) <= 1:
-                        resl = '%9s'%str(item["userID"])+'\t'+item["date"]+'\t'+"1"+'\t'+str(item["punch"])+'\t'+"1"+'\t'+"0"
-                        res_list.append(resl)
-                        test12 += 100 * 1/len(item)
-                        self.res_to_emit_timer.emit(int(test12))
-            self.res_to_emit.emit(list_sc, res_list, "Done Query", "color: green")
+                new_res_list = ['%9s'%str(x["userID"])+'\t'+x["date"]+'\t'+"1"+'\t'+str(x["punch"])+'\t'+"1"+'\t'+"0" for x in ilist if int(x["punch"]) <= 1]
+                counter = 0
+                for _ in ilist:
+                    counter += 1
+                    test12 = 100 * counter/len(ilist)
+                    self.res_to_emit_timer.emit(int(test12))
+
+            self.res_to_emit.emit(list_sc, new_res_list, "Done Query", "color: green")
         else:
             self.res_to_emit.emit([], [], "Empty Query", "color: red")
                 

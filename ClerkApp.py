@@ -2,10 +2,11 @@ from datetime import datetime
 import ipaddress
 import sys
 from PyQt5 import QtWidgets, uic, QtCore
-from PyQt5.QtWidgets import QApplication, QMainWindow
+from PyQt5.QtWidgets import QApplication, QMainWindow, QMessageBox
 from os.path import exists
 from ThreadClerkApp import thdConnZkteco, thdFetchAttendance, thdLoadData, thdSaveSettings, thdSaveToMysql, thdSaveLocalDB
 from PyQt5.QtCore import QDate
+from PyQt5.QtGui import QIntValidator
 from ClerkAppUI import Ui_MainWindow #GUI Python File
 
 
@@ -19,7 +20,7 @@ class MyApp(QMainWindow, Ui_MainWindow):# inherit the Ui_MainWindow class from c
         # uic.loadUi('conNew.ui', self) # para ni e load ang .ui file e erase lng ang Ui_MainWindow sa class
         self.setWindowTitle("Attendance App")
         self.setContentsMargins(10, 10, 10, 10)
-        self.setFixedSize(736, 413) # set fixed size of the main window
+        self.setFixedSize(843, 463) # set fixed size of the main window
         self.loadData()
         header = self.tableWidget.horizontalHeader() 
         header.setSectionResizeMode(0, QtWidgets.QHeaderView.ResizeToContents)
@@ -28,12 +29,15 @@ class MyApp(QMainWindow, Ui_MainWindow):# inherit the Ui_MainWindow class from c
         header.setSectionResizeMode(3, QtWidgets.QHeaderView.ResizeToContents)
         self.myTimer = QtCore.QTimer(self)
         self.cmbRegion.addItems(region_list)
-        
+
+        self.txtIP.setInputMask("000.000.000.000;")
+        self.txtIP.setFocus()
+        self.txtPort.setInputMask("0000000;")
+
+
         datenoww = datetime.today()
         x = QDate(datenoww)
-        self.txtMonth.setDate(x)
-        self.txtDay.setDate(x)
-        self.txtYear.setDate(x)
+        self.txtDateNew.setDate(x)
 
         self.btnSaveSettings.clicked.connect(self.strt_wrkr_1)
         self.wkr_thd_1 = thdSaveSettings()
@@ -51,6 +55,22 @@ class MyApp(QMainWindow, Ui_MainWindow):# inherit the Ui_MainWindow class from c
         self.wkr_thd_6 = thdSaveLocalDB()
         self.wkr_thd_6.res_to_emit.connect(self.on_j_done_6)
 
+        self.btnAboutInfo.triggered.connect(self.show_about)
+
+    
+    def show_about(self):
+        msg = QMessageBox()
+        msg.setWindowTitle("About")
+        msg.setText("Designed By: PGI Corporate I.T.<br> Programmed By: DPZea")
+        msg.setIcon(QMessageBox.Information)
+        msg.exec_()
+
+    def show_message(self, strMessage):
+        msg = QMessageBox()
+        msg.setWindowTitle("Message")
+        msg.setText(strMessage)
+        msg.setIcon(QMessageBox.Critical)
+        msg.exec_()
 
     def loadData(self):
         file_exists = exists("date.json")
@@ -70,11 +90,12 @@ class MyApp(QMainWindow, Ui_MainWindow):# inherit the Ui_MainWindow class from c
             return False
     
     def checkDate(self):
-        date_fmt = self.txtYear.text() + "-" + self.txtMonth.text() + "-" + self.txtDay.text()
+        # date_fmt = self.txtYear.text() + "-" + self.txtMonth.text() + "-" + self.txtDay.text()
+        # dateNew = datetime.strptime(date_fmt, "%Y-%m-%d").strftime("%Y-%m-%d")
         date_fmt_now = datetime.now()
-        dateNew = datetime.strptime(date_fmt, "%Y-%m-%d").strftime("%Y-%m-%d")
         dateNow = date_fmt_now.strftime("%Y-%m-%d")
-        if dateNew < dateNow or dateNew == dateNow:
+        date_new = datetime.strptime(self.txtDateNew.text(), "%m/%d/%Y").strftime("%Y-%m-%d")
+        if date_new < dateNow or date_new == dateNow:
             return True
         else:
             return False
@@ -93,10 +114,10 @@ class MyApp(QMainWindow, Ui_MainWindow):# inherit the Ui_MainWindow class from c
         self.btnSaveSettings.setEnabled(boolEna)
 
     def EnaQuery(self, boolEna):
-        self.txtMonth.setEnabled(boolEna)
-        self.txtDay.setEnabled(boolEna)
-        self.txtYear.setEnabled(boolEna)
+        self.txtDateNew.setEnabled(boolEna)
         self.btnGenAtt.setEnabled(boolEna)
+
+
 
 
 # for auto connect timer
@@ -124,24 +145,27 @@ class MyApp(QMainWindow, Ui_MainWindow):# inherit the Ui_MainWindow class from c
             self.lblStatus.setStyleSheet('color: green')
 # end of auto connect
 
+
     def strt_wrkr_1(self):
-        if self.cmbRegion.currentText() == 'Blank':
-            self.lblStatus.setText("Invalid Region")
-            self.lblStatus.setStyleSheet('color: red')
-        elif self.txtIP.text() == "" or self.txtPort.text() == "" or self.txtSCName.text() == "":
-            self.lblStatus.setText("Please Check Your Inputs")
-            self.lblStatus.setStyleSheet('color: red')
+        if self.txtIP.text() == "":
+            self.show_message("Invalid Biometrics IP Address")
+            self.txtIP.setText("")
+            self.txtIP.setFocus()
+        elif self.txtPort.text() == "":
+            self.show_message("Invalid Port")
+        elif self.cmbRegion.currentText() == 'Blank':
+            self.show_message("Invalid Region")
+            self.cmbRegion.setFocus()
+        elif self.txtSCName.text() == "":
+            self.show_message("Invalid Sale Center Name")
         else:
-            getReturn = self.validate_ip_address(self.txtIP.text())
-            if getReturn:
-                self.wkr_thd_1.txt_ip = self.txtIP.text()
-                self.wkr_thd_1.txt_port = self.txtPort.text()
-                self.wkr_thd_1.txt_region = self.cmbRegion.currentText()
-                self.wkr_thd_1.txt_scname = self.txtSCName.text()
-                self.wkr_thd_1.start()
-            else:
-                self.lblStatus.setText("Invalid IP Address")
-                self.lblStatus.setStyleSheet('color: red')
+            self.lblStatus.setText("Testing Connection...")
+            self.lblStatus.setStyleSheet("color: orange")
+            self.wkr_thd_1.txt_ip = self.txtIP.text()
+            self.wkr_thd_1.txt_port = self.txtPort.text()
+            self.wkr_thd_1.txt_region = self.cmbRegion.currentText()
+            self.wkr_thd_1.txt_scname = self.txtSCName.text()
+            self.wkr_thd_1.start()
     
     def strt_wrkr_2(self):
         self.wkr_thd_2 = thdLoadData()
@@ -160,17 +184,15 @@ class MyApp(QMainWindow, Ui_MainWindow):# inherit the Ui_MainWindow class from c
         if chkDate:
             self.wkr_thd_4.txt_ip = self.txtIP.text()
             self.wkr_thd_4.txt_port = self.txtPort.text()
-            self.wkr_thd_4.txt_month = self.txtMonth.text()
-            self.wkr_thd_4.txt_day = self.txtDay.text()
-            self.wkr_thd_4.txt_year = self.txtYear.text()
+            self.wkr_thd_4.date_new = self.txtDateNew.text()
+
             self.EnaQuery(False)
             self.btnGenAtt.setEnabled(False)
             self.lblStatus.setText("Generating...")
             self.lblStatus.setStyleSheet("color: orange")
             self.wkr_thd_4.start()
         else:
-            self.lblStatus.setText("Date shouldn't above current")
-            self.lblStatus.setStyleSheet("color: red")
+            self.show_message("Invalid Date <br>Date shouldn't above current")
 
     def strt_wrkr_5(self):
         self.btnSaveToMysql.setEnabled(False)
@@ -234,8 +256,7 @@ class MyApp(QMainWindow, Ui_MainWindow):# inherit the Ui_MainWindow class from c
             self.wkr_thd_6.txt_region = self.cmbRegion.currentText()
         else:
             self.EnaQuery(True)
-            self.lblStatus.setText("No Data Available")
-            self.lblStatus.setStyleSheet("color: orange")
+            self.show_message("No Data Available")
 
         self.wkr_thd_3.stop()
 
