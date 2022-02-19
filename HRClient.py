@@ -30,9 +30,9 @@ class MyApp(QMainWindow, Ui_MainWindow): # inherit the Ui_MainWindow class from 
         super().__init__()
         self.setupUi(self) #Load the setup ui from converted python ui
         # uic.loadUi('HRClient.ui', self) # para ni e load ang .ui file e erase lng ang Ui_MainWindow sa class
-        self.setWindowTitle("HR Client App")
-        self.setContentsMargins(10, 10, 10, 10)
-        self.setFixedSize(403, 812) # set fixed size of the main window
+        self.setWindowTitle("PGIDLA V.1.0.3.220219")
+        # self.setContentsMargins(10, 10, 10, 10)
+        self.setFixedSize(622, 571) # set fixed size of the main window
         self.cmbRegion.addItems(region_list)
         self.progressBar.setProperty("value", 0)
         self.progressBar.hide()
@@ -129,6 +129,7 @@ class MyApp(QMainWindow, Ui_MainWindow): # inherit the Ui_MainWindow class from 
         self.lblStatus.setStyleSheet('color: orange')
         self.wrkr_thd_3.txt_region = self.cmbRegion.currentText()
         self.wrkr_thd_3.txt_date_query = datetime.strptime(self.txtDate.text(), "%m/%d/%Y").strftime("%Y-%m-%d")
+        self.wrkr_thd_2.txt_date_query = datetime.strptime(self.txtDate.text(), "%m/%d/%Y").strftime("%Y.%m.%d")
         self.wrkr_thd_2.start()
 
     def strt_wrkr_3(self):
@@ -157,11 +158,18 @@ class MyApp(QMainWindow, Ui_MainWindow): # inherit the Ui_MainWindow class from 
             self.setEna(False)
             self.wrkr_thd_2.txt_data_to_convert = dataList
             self.wrkr_thd_2.txt_region = self.cmbRegion.currentText()
+            self.show_message("Data Successfully Downloaded", "Information")
         self.lblStatus.setText(resTxt)
         self.lblStatus.setStyleSheet(resColor)
         self.wrkr_thd_1.stop()
 
     def on_jb_don_2(self, resTxt, resColor):
+        import os
+        script_dir = os.path.dirname(__file__) #<-- absolute dir the script is in
+        rel_path = "C:/SaveFiles/"
+        abs_file_path = os.path.join(script_dir, rel_path)
+        os.startfile(abs_file_path)
+
         self.lblStatus.setText(resTxt)
         self.lblStatus.setStyleSheet(resColor)
         self.wrkr_thd_2.stop()
@@ -175,7 +183,6 @@ class MyApp(QMainWindow, Ui_MainWindow): # inherit the Ui_MainWindow class from 
             self.progressBar.show()
         if resInt == 100:
             self.progressBar.hide()
-            self.show_message("Data Successfully Downloaded", "Information")
         self.progressBar.setValue(resInt)
 
     def on_jb_don_4(self, resTxt, resColor, resBool, resDict):
@@ -273,8 +280,8 @@ class thdConvertData(QThread):
         super(thdConvertData, self).__init__(parent)
 
     def run(self):
-        dateNow = date.today()
-        filename = f"./SaveFiles/{dateNow.strftime('%m.%d.%Y')}.{self.txt_region}.dat"
+        # dateNow = date.today()
+        filename = f"C:/SaveFiles/{self.txt_date_query}_{self.txt_region}.dat"
         if not os.path.exists(os.path.dirname(filename)):#check if folder exist then creat if not
             try:
                 os.makedirs(os.path.dirname(filename))

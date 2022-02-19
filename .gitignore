@@ -6,9 +6,13 @@ __pycache__/
 # C extensions
 *.so
 
-#json file
+#json file or not included files
 *.json
 *.pkl
+*.ico
+
+test.py
+thread_objects.py
 
 # Distribution / packaging
 .Python
